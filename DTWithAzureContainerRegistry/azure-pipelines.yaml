@@ -1,0 +1,166 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  - master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - script: echo '************'Welcome To Jmeter Distributed Testing Using AzurePipeline************''
+    displayName: "JMeter Distributed Load Testing With Multiple Slaves"
+
+  - task: Bash@3
+    displayName: "Docker installation with docker compose v2 plugin"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo '##Docker compose v2 Pugin installation##'
+        #curl -SL https://github.com/docker/compose/releases/download/v2.11.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+        curl -SL https://github.com/docker/compose/releases/download/v2.11.0/docker-compose-linux-x86_64 -o ./docker-compose
+
+        ## Execute the below command only if docker compose v2 installation failed ##
+        #sudo ln -s $(System.DefaultWorkingDirectory)/docker-compose $(System.DefaultWorkingDirectory)/docker-compose
+
+        echo '##Docker Compose Version Check##'
+        docker compose version
+
+        echo '##Docker Version Check##'
+        docker --version
+
+        echo '##Docker Desktop Version Check##'
+        docker version
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+
+  - task: Bash@3
+    displayName: "ACR Login"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo '##Login to ACR##'
+        docker login satsjmeter.azurecr.io -u SatsJMeter -p fMljEPkmRbyU3lNKgQgDmbr=XlDx7FtI
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+
+  - task: Bash@3
+    displayName: "Build and Push docker image to ACR"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo '##Build and Push docker image to ACR##'
+        ls -lrt $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry
+
+        echo '##Build docker JMeter Base image from docker file##'
+        docker build -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/JMeter_Base_Image/Dockerfile -t satsjmeter.azurecr.io/jmeter:jmeterbase .
+
+        echo '##push to JMeter Base docker image to ACR repo##'
+        docker push satsjmeter.azurecr.io/jmeter:jmeterbase
+
+        echo '##Build JMeter Master Docker image from docker file##' 
+        docker build -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/JMeter_Master_Image/Dockerfile -t satsjmeter.azurecr.io/jmeter:jmetermaster .
+
+        echo '##push to JMeter Master Docker image to ACR repo##'
+        docker push satsjmeter.azurecr.io/jmeter:jmetermaster
+
+        echo '##Build JMeter Slave Docker image from docker file##' 
+        docker build -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/JMeter_Slave_Image/Dockerfile -t satsjmeter.azurecr.io/jmeter:jmeterslave .
+
+        echo '##push to JMeter Slave Docker image to ACR repo##'
+        docker push satsjmeter.azurecr.io/jmeter:jmeterslave
+
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+
+  - task: Bash@3
+    displayName: "Execute Performance Test"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo "listing files in working dir and DTWithAzureContainerRegistry"
+        ls -lrt $(System.DefaultWorkingDirectory)
+        ls -lrt $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/
+
+        echo "##Checking for docker-compose containers status##"
+        status_dockercmp=$(docker compose -f DTWithAzureContainerRegistry/docker-compose.yml ps -q --filter status=running | wc -l)
+        echo "docker compose status: $status_dockercmp"
+        if [ $status_dockercmp > 0 ]
+        then
+        docker-compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml down
+        fi
+
+        echo "##Creating a Master and a Slave container##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml up -d
+
+        echo "##Listing Containers##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml ps
+
+        echo "##Scale Slave machines to required numbers of replicas | default is set as 2##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml scale slave=$(Number_Of_Slaves)
+
+        echo "##Listing Containers to get total number of slaves running##"
+        docker compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml ps --filter status=running slave
+
+        echo "##Total count of slaves##"
+        Totalslavecount=$(docker compose -f DTWithAzureContainerRegistry/docker-compose.yml ps -q --filter status=running slave | wc -l)
+        echo "Total slave count: $Totalslavecount"
+
+        echo "##Extracting master container IP address##"
+        master_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' master)
+        echo "master ip: $master_ip"
+
+        echo "##Extracting slave containers IP address##"
+        docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}} %tab% {{.Name}}' $(docker compose -f DTWithAzureContainerRegistry/docker-compose.yml ps -q --filter status=running slave) | sed 's#%tab%#\t#g' | sed 's#/##g' | sort -t . -k 1,1n -k 2,2n -k 3,3n -k 4,4n
+
+        echo "##Storing slave ip addresses in a seperate variable##"
+        temp=""
+        for ((slave_no=1; slave_no<=$Totalslavecount; slave_no++))
+        do
+          slave_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker compose -f DTWithAzureContainerRegistry/docker-compose.yml ps -q --filter status=running slave) | awk "NR==$slave_no {print $1}")
+          echo "slave_$slave_no=$slave_ip"
+          temp=$temp$slave_ip,
+          echo "temp value=$temp"
+        done
+
+        ip_set=$temp
+        echo "ip_set with comma delimted is=$ip_set"
+        finalipset=${ip_set%?}
+        echo "finalipset is=$finalipset"
+
+        echo "##Copying test scripts and csv files to /jmeter/apache-jmeter-5.5/bin/ location of Master and all slave containers##"
+        docker compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/Scripts/ master:/jmeter/apache-jmeter-5.5/bin/
+        docker compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/Scripts/ slave:/jmeter/apache-jmeter-5.5/bin/
+
+        echo "##Listing files in master container##"
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
+
+        echo "##Listing files in slave container##"
+        for ((slave_index=1; slave_index<=$Totalslavecount; slave_index++))
+        do
+          docker exec -i DTWithAzureContainerRegistry_slave_$slave_index /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
+        done
+
+        echo "##Executing Loadtest##"
+        echo "Current Working DIR is: $PWD"
+        docker exec -i -e JVM_ARGS="-Xms2048m -Xmx4096m" master /bin/bash -c "cd /jmeter/apache-jmeter-5.5/bin && ls -lart && jmeter -n -t ./Scripts/ReqRes.jmx -Dserver.rmi.ssl.disable=true -R${finalipset} -l ./Scripts/jmeter$(Build.BuildId).jtl"
+
+        echo "##Viewing master machine jmeter.log##"
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/ && cat jmeter.log'
+                  
+        echo "##Creating HTML Report##"
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin && jmeter -g ./Scripts/jmeter$(Build.BuildId).jtl -e -o ./Scripts/htmlreport$(Build.BuildId)/'
+
+        echo "##Copying JTL and HTML Report to Azure Working DIR##"
+        cd $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry
+        echo "Current Working DIR is: $PWD"
+        docker cp master:/jmeter/apache-jmeter-5.5/bin/Scripts/jmeter$(Build.BuildId).jtl $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/jmeter$(Build.BuildId).jtl
+        docker cp master:/jmeter/apache-jmeter-5.5/bin/Scripts/htmlreport$(Build.BuildId)/ $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/htmlreport$(Build.BuildId)/
+
+        echo "##Kill and Remove all Docker Compose Containers##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DTWithAzureContainerRegistry/docker-compose.yml down
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+
+  - task: PublishReleaseArtifact@1
+    displayName: "Collate Results"
+    inputs:
+      artifactPath: "$(System.DefaultWorkingDirectory)"
