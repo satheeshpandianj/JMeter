@@ -45,28 +45,28 @@ steps:
         docker --version
       workingDirectory: "$(System.DefaultWorkingDirectory)"
 
-  # - task: Bash@3
-  #   displayName: "Build and Push docker image"
-  #   inputs:
-  #     targetType: "inline"
-  #     script: |
-  #       echo 'Build and Push docker image'
-  #       ls -lrt $(System.DefaultWorkingDirectory)/DistributedTesting
+  - task: Bash@3
+    displayName: "Build and Push docker image"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo 'Build and Push docker image'
+        ls -lrt $(System.DefaultWorkingDirectory)/DistributedTesting
 
-  #       echo 'Build JMeter Base docker image from docker file'
-  #       docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Base_Image/Dockerfile -t satheeshpandianj/jmeterbase:v1 .
-  #       echo 'push JMeter Base docker image to dockerhub repo'
-  #       docker push satheeshpandianj/jmeterbase:v1
+        echo 'Build JMeter Base docker image from docker file'
+        docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Base_Image/Dockerfile -t satheeshpandianj/jmeterbase:v1 .
+        echo 'push JMeter Base docker image to dockerhub repo'
+        docker push satheeshpandianj/jmeterbase:v1
 
-  #       echo 'Build JMeter Master docker image from docker file'
-  #       docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Master_Image/Dockerfile -t satheeshpandianj/jmetermaster:v1 .
-  #       echo 'push JMeter Master docker image to dockerhub repo'
-  #       docker push satheeshpandianj/jmetermaster:v1
+        echo 'Build JMeter Master docker image from docker file'
+        docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Master_Image/Dockerfile -t satheeshpandianj/jmetermaster:v1 .
+        echo 'push JMeter Master docker image to dockerhub repo'
+        docker push satheeshpandianj/jmetermaster:v1
 
-  #       echo 'Build JMeter Slave docker image from docker file'
-  #       docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Slave_Image/Dockerfile -t satheeshpandianj/jmeterslave:v1 .
-  #       echo 'push JMeter Slave docker image to dockerhub repo'
-  #       docker push satheeshpandianj/jmeterslave:v1
+        echo 'Build JMeter Slave docker image from docker file'
+        docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Slave_Image/Dockerfile -t satheeshpandianj/jmeterslave:v1 .
+        echo 'push JMeter Slave docker image to dockerhub repo'
+        docker push satheeshpandianj/jmeterslave:v1
 
   - task: Bash@3
     displayName: "Execute Performance Test"
