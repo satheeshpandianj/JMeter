@@ -1,0 +1,162 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  - master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - script: echo '************'Welcome To Jmeter Distributed Testing Using AzurePipeline************''
+    displayName: "JMeter Distributed Load Testing With Multiple Slaves"
+
+  - task: Bash@3
+    displayName: "Docker installation with docker compose v2 plugin"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo '##Docker compose v2 Pugin installation##'
+        #curl -SL https://github.com/docker/compose/releases/download/v2.11.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+        curl -SL https://github.com/docker/compose/releases/download/v2.11.0/docker-compose-linux-x86_64 -o ./docker-compose
+
+        ## Execute the below command only if docker compose v2 installation failed ##
+        #sudo ln -s $(System.DefaultWorkingDirectory)/docker-compose $(System.DefaultWorkingDirectory)/docker-compose
+
+        echo '##Docker Compose Version Check##'
+        docker compose version
+
+        echo '##Docker Version Check##'
+        docker --version
+
+        echo '##Docker Desktop Version Check##'
+        docker version
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+
+  - task: Bash@3
+    displayName: 'DockerHub Login'
+    inputs:
+      targetType: 'inline'
+      script: |
+        echo '##Login to Docker Hub'
+        docker login -u satheeshpandianj -p Adhira_2312
+        docker --version
+      workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+  - task: Bash@3
+    displayName: 'Build and Push docker image'
+    inputs:
+      targetType: 'inline'
+      script: |
+        echo 'Build and Push docker image'
+        ls -lrt $(System.DefaultWorkingDirectory)/DistributedTesting
+
+        echo 'Build JMeter Base docker image from docker file'
+        docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Base_Image/Dockerfile -t satheeshpandianj/jmeterbase:v1 .
+        echo 'push JMeter Base docker image to dockerhub repo'
+        docker push satheeshpandianj/jmeterbase:v1
+
+        echo 'Build JMeter Master docker image from docker file'
+        docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Master_Image/Dockerfile -t satheeshpandianj/jmetermaster:v1 .
+        echo 'push JMeter Master docker image to dockerhub repo'
+        docker push satheeshpandianj/jmetermaster:v1
+
+        echo 'Build JMeter Slave docker image from docker file'
+        docker build -f $(System.DefaultWorkingDirectory)/DistributedTesting/JMeter_Slave_Image/Dockerfile -t satheeshpandianj/jmeterslave:v1 .
+        echo 'push JMeter Slave docker image to dockerhub repo'
+        docker push satheeshpandianj/jmeterslave:v1
+
+  - task: Bash@3
+    displayName: "Execute Performance Test"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo "listing files in working dir and DistributedTesting"
+        ls -lrt $(System.DefaultWorkingDirectory)
+        ls -lrt $(System.DefaultWorkingDirectory)/DistributedTesting/
+
+        echo "##Checking for docker-compose containers status##"
+        status_dockercmp=$(docker compose -f DistributedTesting/docker-compose.yml ps -q --filter status=running | wc -l)
+        echo "docker compose status: $status_dockercmp"
+        if [ $status_dockercmp > 0 ]
+        then
+        docker-compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml down
+        fi
+
+        echo "##Creating a Master and a Slave container##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml up -d
+
+        echo "##Listing Containers##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml ps
+
+        echo "##Scale Slave machines to required numbers of replicas | default is set as 2##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml scale slave=$(Number_Of_Slaves)
+
+        echo "##Listing Containers to get total number of slaves running##"
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml ps --filter status=running slave
+
+        echo "##Total count of slaves##"
+        Totalslavecount=$(docker compose -f DistributedTesting/docker-compose.yml ps -q --filter status=running slave | wc -l)
+        echo "Total slave count: $Totalslavecount"
+
+        echo "##Extracting jm_master container IP address##"
+        master_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' master)
+        echo "master ip: $master_ip"
+
+        echo "##Extracting jm_slave containers IP address##"
+        docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}} %tab% {{.Name}}' $(docker compose -f DistributedTesting/docker-compose.yml ps -q --filter status=running slave) | sed 's#%tab%#\t#g' | sed 's#/##g' | sort -t . -k 1,1n -k 2,2n -k 3,3n -k 4,4n
+
+        echo "##Storing slave ip addresses in a seperate variable##"
+        temp=""
+        for ((slave_no=1; slave_no<=$Totalslavecount; slave_no++))
+        do
+          slave_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker compose -f DistributedTesting/docker-compose.yml ps -q --filter status=running slave) | awk "NR==$slave_no {print $1}")
+          echo "slave_$slave_no=$slave_ip"
+          temp=$temp$slave_ip,
+          echo "temp value=$temp"
+        done
+
+        ip_set=$temp
+        echo "ip_set with comma delimted is=$ip_set"
+        finalipset=${ip_set%?}
+        echo "finalipset is=$finalipset"
+
+        echo "##Copying test scripts and csv files to /home/jmeter/ location of Master and all slave containers##"
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ master:/home/jmeter/Scripts/
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ slave:/home/jmeter/Scripts/
+
+        echo "##Listing files in master container##"
+        docker exec -i master /bin/bash -c 'cd /home/jmeter/Scripts/ && ls -lart'
+
+        echo "##Listing files in slave container##"
+        for ((slave_index=1; slave_index<=$Totalslavecount; slave_index++))
+        do
+          docker exec -i DistributedTesting_slave_$slave_index /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
+        done
+
+        echo "##Executing Loadtest##"
+        echo "Current Working DIR is: $PWD"
+        docker exec -i -e JVM_ARGS="-Xms2048m -Xmx4096m" master /bin/bash -c "cd /jmeter/apache-jmeter-5.5/bin && jmeter -n -t /jmeter/apache-jmeter-5.5/bin/Scripts/ReqRes.jmx -Dserver.rmi.ssl.disable=true -R${finalipset} -l /jmeter/apache-jmeter-5.5/bin/Scripts/jmeter$(Build.BuildId).jtl"
+
+        echo "##Viewing master machine jmeter.log##"
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/ && cat jmeter.log'
+                  
+        echo "##Creating HTML Report##"
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin && jmeter -g /jmeter/apache-jmeter-5.5/bin/Scripts/jmeter$(Build.BuildId).jtl -e -o /jmeter/apache-jmeter-5.5/bin/Scripts/htmlreport$(Build.BuildId)/'
+
+        echo "##Copying JTL and HTML Report to Azure Working DIR##"
+        cd $(System.DefaultWorkingDirectory)/DistributedTesting
+        echo "Current Working DIR is: $PWD"
+        docker cp master:/jmeter/apache-jmeter-5.5/bin/Scripts/jmeter$(Build.BuildId).jtl $(System.DefaultWorkingDirectory)/DistributedTesting/jmeter$(Build.BuildId).jtl
+        docker cp master:/jmeter/apache-jmeter-5.5/bin/Scripts/htmlreport$(Build.BuildId)/ $(System.DefaultWorkingDirectory)/DistributedTesting/htmlreport$(Build.BuildId)/
+
+        echo "##Kill and Remove all Docker Compose Containers##"
+        docker-compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml down
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+
+  - task: PublishReleaseArtifact@1
+    displayName: "Collate Results"
+    inputs:
+      artifactPath: "$(System.DefaultWorkingDirectory)"
