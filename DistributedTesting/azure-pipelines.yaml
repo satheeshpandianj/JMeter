@@ -124,8 +124,8 @@ steps:
         echo "finalipset is=$finalipset"
 
         echo "##Copying test scripts and csv files to /jmeter/apache-jmeter-5.5/bin/ location of Master and all slave containers##"
-        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ master:/jmeter/apache-jmeter-5.5/bin/Scripts/
-        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ slave:/jmeter/apache-jmeter-5.5/bin/Scripts/
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ master:/jmeter/apache-jmeter-5.5/bin/
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ slave:/jmeter/apache-jmeter-5.5/bin/
 
         echo "##Listing files in master container##"
         docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
