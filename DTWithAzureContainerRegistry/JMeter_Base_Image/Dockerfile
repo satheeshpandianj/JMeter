@@ -92,8 +92,6 @@ RUN rm ${JMETER_PLUGINS}/jmeter-plugins-manager-0.20.jar
 RUN ${JMETER_HOME}/bin/PluginsManagerCMD.sh status
 RUN ${JMETER_HOME}/bin/PluginsManagerCMD.sh install jmeter-prometheus=0.6.0
 
-#Add jmx and csv files to master and slave machines
-COPY ./Scripts ${JMETER_HOME}/bin/Scripts
 
 ENV PATH $PATH:$JMETER_BIN
 
