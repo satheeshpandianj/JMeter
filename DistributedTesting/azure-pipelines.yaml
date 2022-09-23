@@ -138,13 +138,13 @@ steps:
 
         echo "##Executing Loadtest##"
         echo "Current Working DIR is: $PWD"
-        docker exec -i -e JVM_ARGS="-Xms2048m -Xmx4096m" master /bin/bash -c "cd /jmeter/apache-jmeter-5.5/bin && jmeter -n -t /Scripts/ReqRes.jmx -Dserver.rmi.ssl.disable=true -R${finalipset} -l /Scripts/jmeter$(Build.BuildId).jtl"
+        docker exec -i -e JVM_ARGS="-Xms2048m -Xmx4096m" master /bin/bash -c "cd /jmeter/apache-jmeter-5.5/bin && ls -lart && jmeter -n -t ./Scripts/ReqRes.jmx -Dserver.rmi.ssl.disable=true -R${finalipset} -l ./Scripts/jmeter$(Build.BuildId).jtl"
 
         echo "##Viewing master machine jmeter.log##"
         docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/ && cat jmeter.log'
                   
         echo "##Creating HTML Report##"
-        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin && jmeter -g /Scripts/jmeter$(Build.BuildId).jtl -e -o /Scripts/htmlreport$(Build.BuildId)/'
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin && jmeter -g ./Scripts/jmeter$(Build.BuildId).jtl -e -o ./Scripts/htmlreport$(Build.BuildId)/'
 
         echo "##Copying JTL and HTML Report to Azure Working DIR##"
         cd $(System.DefaultWorkingDirectory)/DistributedTesting
