@@ -133,7 +133,7 @@ steps:
         echo "##Listing files in slave container##"
         for ((slave_index=1; slave_index<=$Totalslavecount; slave_index++))
         do
-          docker exec -i DistributedTesting_slave_$slave_index /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
+          docker exec -i distributedtesting_slave_$slave_index /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
         done
 
         echo "##Executing Loadtest##"
