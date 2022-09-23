@@ -123,12 +123,12 @@ steps:
         finalipset=${ip_set%?}
         echo "finalipset is=$finalipset"
 
-        echo "##Copying test scripts and csv files to /home/jmeter/ location of Master and all slave containers##"
-        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ master:/home/jmeter/Scripts/
-        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ slave:/home/jmeter/Scripts/
+        echo "##Copying test scripts and csv files to /jmeter/apache-jmeter-5.5/bin/ location of Master and all slave containers##"
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ master:/jmeter/apache-jmeter-5.5/bin/Scripts/
+        docker compose -f $(System.DefaultWorkingDirectory)/DistributedTesting/docker-compose.yml cp $(System.DefaultWorkingDirectory)/DistributedTesting/Scripts/ slave:/jmeter/apache-jmeter-5.5/bin/Scripts/
 
         echo "##Listing files in master container##"
-        docker exec -i master /bin/bash -c 'cd /home/jmeter/Scripts/ && ls -lart'
+        docker exec -i master /bin/bash -c 'cd /jmeter/apache-jmeter-5.5/bin/Scripts/ && ls -lart'
 
         echo "##Listing files in slave container##"
         for ((slave_index=1; slave_index<=$Totalslavecount; slave_index++))
