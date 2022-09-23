@@ -3,6 +3,44 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+###########
+# WORKFLOW
+###########
+# CREATE JMETER IMAGES -> PUSH TO AZURE CONTAINER REGISTRY -> CREATE CONTAINERS USING IMAGES -> RUN THE TEST -> SAVE THE RESULT -> COPY THE RESULT TO LOCAL
+
+#######
+# NOTE: Current folder/directory (DTWithAzureContainerRegistry) is not the root. So we need to include DTWithAzureContainerRegistry for file path in all the commands.
+#       This is where you keep all the folders/files (Image files/ Scripts etc)
+#######
+
+##################
+# STEPS TO FOLLOW
+##################
+# 1. Pick any ubuntu linux distribution machine
+# 2. Install Docker Compose Plugin in the machine
+# 3. Check Docker Compose Version, Docker Version and Docker Desktop Version
+#    to make sure those are installed
+# 4. Login into Azure Container Registry using Azure Container Registry login credentials (Open
+#    the registry you created in Azure. Click on Access Key. You will get the username and password).
+# 5. Build the following docker image based on the dockerfile created in DTWithAzureContainerRegistry folder
+#     a) Jmeter Base image (Use /DTWithAzureContainerRegistry/JMeter_Base_Image/)
+#     b) Jmeter Master image (Use /DTWithAzureContainerRegistry/JMeter_Master_Image/)
+#     c) Jmeter Slave image (Use /DTWithAzureContainerRegistry/JMeter_Slave_Image/)
+# 6. Push the docker images created to Azure Container repository
+#    (<Azure Container Registry Name>/<Repository Name:Image Name>)
+# 7. Check if any docker containers (master and slave) are already running. If so, kill them.
+# 8. Create the containers (master and slave)
+# 9. Check if those containers are up and running
+# 10. Increase the slave containers base on your need (Number_of_slaves variable is set)
+# 11. Check if all the slave containers are up and running
+# 12. Count the number of containers running
+# 13. Extract IPs for all the running containers (both master and slaves)
+# 14. Copy the test scripts and data from local machine to containers (both master and slaves)
+# 16. Check if the test scripts and data are copied to containers
+# 17. Execute the performance test using jmeter command
+# 18. Copy the test results from containers to local machine
+# 19. Kill all the containers running
+
 trigger:
   - master
 
