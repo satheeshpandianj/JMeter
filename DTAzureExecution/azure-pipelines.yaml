@@ -40,14 +40,11 @@ jobs:
       - task: PowerShell@2
         displayName: Build Docker Images
         inputs:
-          pwsh: Write-Host "Hello World"
-          # targetType: "filePath"
-          # filePath: $(System.DefaultWorkingDirectory)\docker-build.ps1
-          # Script: Get-Location
-          # workingDirectory: "$(Build.SourcesDirectory)"
-          # filePath: "$(Build.SourcesDirectory)/docker-build.ps1"
-          # arguments: '-SubscriptionGuid $(SubscriptionGuid) -TenantId $(TenantId) -ClientId $(ClientId) -ClientSecret $(ClientSecret) -storageAccountName "azurejmeterstorageaccount" -storageAccountKey $(storageAccountKey) -src_script $(src_script) -src_users $(src_users) -src_test_duration $(src_test_duration) -src_rampup_duration $(src_rampup_duration)'
-          # pwsh: true
+          targetType: "inline"
+          script: |
+            # Write your PowerShell commands here.
+            Get-Location
+            Write-Host "Hello World"
       # - task: PowerShell@2
       #   displayName: Run Load Tests
       #   inputs:
