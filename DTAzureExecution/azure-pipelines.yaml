@@ -40,7 +40,7 @@ jobs:
       - task: PowerShell@2
         displayName: Build Docker Images
         inputs:
-          filePath: ./docker-build.ps1
+          filePath: $(System.DefaultWorkingDirectory)/docker-build.ps1
           # arguments: '-SubscriptionGuid $(SubscriptionGuid) -TenantId $(TenantId) -ClientId $(ClientId) -ClientSecret $(ClientSecret) -storageAccountName "azurejmeterstorageaccount" -storageAccountKey $(storageAccountKey) -src_script $(src_script) -src_users $(src_users) -src_test_duration $(src_test_duration) -src_rampup_duration $(src_rampup_duration)'
           pwsh: true
       # - task: PowerShell@2
