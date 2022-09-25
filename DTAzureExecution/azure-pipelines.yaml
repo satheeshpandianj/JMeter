@@ -40,9 +40,9 @@ jobs:
       - task: PowerShell@2
         displayName: Build Docker Images
         inputs:
-          Script: Write-Host "Hello World"
-          targetType: "filePath"
-          filePath: $(System.DefaultWorkingDirectory)\docker-build.ps1
+          pwsh: Write-Host "Hello World"
+          # targetType: "filePath"
+          # filePath: $(System.DefaultWorkingDirectory)\docker-build.ps1
           # Script: Get-Location
           # workingDirectory: "$(Build.SourcesDirectory)"
           # filePath: "$(Build.SourcesDirectory)/docker-build.ps1"
