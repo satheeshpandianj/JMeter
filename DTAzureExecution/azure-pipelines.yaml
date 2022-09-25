@@ -22,11 +22,6 @@ parameters:
     type: string
     default: 60
 
-variables:
-  storageAccountName: "azurejmeterstorageaccount"
-  logTableName: "loadtestresult"
-  logFullTableName: "loadtestresultfull"
-
 jobs:
   - job: LoadTest
     displayName: Run Load Tests
