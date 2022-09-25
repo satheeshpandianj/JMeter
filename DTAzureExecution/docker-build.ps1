@@ -1,4 +1,4 @@
-Set-Location ./JMeter_Base_Image
+Set-Location ./DTAZUREEXECUTION/JMeter_Base_Image
 # Get-ChildItem
 docker login -u satheeshpandianj -p Adhira_2312
 docker build -t satheeshpandianj/jmeterbase:latest .
