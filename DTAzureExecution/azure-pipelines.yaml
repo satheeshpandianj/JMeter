@@ -44,6 +44,7 @@ jobs:
           script: |
             # Write your PowerShell commands here.
             Get-Location
+            Get-ChildItem
             Write-Host "Hello World"
       # - task: PowerShell@2
       #   displayName: Run Load Tests
