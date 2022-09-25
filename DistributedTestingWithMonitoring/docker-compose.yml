@@ -1,0 +1,19 @@
+version: "2"
+
+services:
+  master:
+    image: satheeshpandianj/jmetermaster:v1
+    container_name: master
+    tty: true
+    hostname: master
+    networks:
+      - sats
+  slave:
+    image: satheeshpandianj/jmeterslave:v1
+    tty: true
+    networks:
+      - sats
+
+networks:
+  sats:
+    driver: bridge

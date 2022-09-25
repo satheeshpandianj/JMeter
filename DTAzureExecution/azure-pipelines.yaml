@@ -1,0 +1,56 @@
+pool:
+  vmImage: windows-latest
+
+parameters:
+  - name: SCRIPT_NAME
+    displayName: SCRIPT_NAME
+    type: string
+    default: ReqRes.jmx
+
+  - name: NUMBER_OF_USERS
+    displayName: NUMBER_OF_USERS
+    type: string
+    default: 5
+
+  - name: TEST_DURATION
+    displayName: TEST_DURATION
+    type: string
+    default: 120
+
+  - name: RAMP_UP_DURATION
+    displayName: RAMP_UP_DURATION
+    type: string
+    default: 60
+
+variables:
+  storageAccountName: "azurejmeterstorageaccount"
+  logTableName: "loadtestresult"
+  logFullTableName: "loadtestresultfull"
+
+jobs:
+  - job: LoadTest
+    displayName: Run Load Tests
+    variables:
+      - group: AzurePowershellScript
+      - name: src_script
+        value: ${{parameters.SCRIPT_NAME}}
+      - name: src_users
+        value: ${{parameters.NUMBER_OF_USERS}}
+      - name: src_test_duration
+        value: ${{parameters.TEST_DURATION}}
+      - name: src_rampup_duration
+        value: ${{parameters.RAMP_UP_DURATION}}
+
+    steps:
+      - task: PowerShell@2
+        displayName: Build Docker Images
+        inputs:
+          filePath: ./docker-build.ps1
+          # arguments: '-SubscriptionGuid $(SubscriptionGuid) -TenantId $(TenantId) -ClientId $(ClientId) -ClientSecret $(ClientSecret) -storageAccountName "azurejmeterstorageaccount" -storageAccountKey $(storageAccountKey) -src_script $(src_script) -src_users $(src_users) -src_test_duration $(src_test_duration) -src_rampup_duration $(src_rampup_duration)'
+          pwsh: true
+      # - task: PowerShell@2
+      #   displayName: Run Load Tests
+      #   inputs:
+      #     filePath: ./RunLoadTest.ps1
+      #     arguments: '-SubscriptionGuid $(SubscriptionGuid) -TenantId $(TenantId) -ClientId $(ClientId) -ClientSecret $(ClientSecret) -storageAccountName "azurejmeterstorageaccount" -storageAccountKey $(storageAccountKey) -src_script $(src_script) -src_users $(src_users) -src_test_duration $(src_test_duration) -src_rampup_duration $(src_rampup_duration)'
+      #     pwsh: true
