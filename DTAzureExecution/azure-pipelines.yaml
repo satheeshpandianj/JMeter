@@ -46,6 +46,8 @@ jobs:
             Get-Location
             Get-ChildItem
             Write-Host "Hello World"
+          filePath: "$(System.DefaultWorkingDirectory)/DTAzureExecution/docker-build.ps1"
+          pwsh: true
       # - task: PowerShell@2
       #   displayName: Run Load Tests
       #   inputs:
