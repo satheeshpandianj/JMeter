@@ -1,0 +1,19 @@
+version: "2"
+
+services:
+  master:
+    image: satsjmeter.azurecr.io/jmeter:jmetermaster
+    container_name: master
+    tty: true
+    hostname: master
+    networks:
+      - sats
+  slave:
+    image: satsjmeter.azurecr.io/jmeter:jmeterslave
+    tty: true
+    networks:
+      - sats
+
+networks:
+  sats:
+    driver: bridge
